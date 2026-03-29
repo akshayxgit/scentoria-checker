@@ -24,8 +24,9 @@ HEADERS = {
 
 PRODUCTS_PER_PAGE = 250
 MAX_RETRIES = 5
-RETRY_BACKOFF = 3  # seconds, multiplied by attempt number
-CONCURRENT_WORKERS = 6  # parallel page fetches
+RETRY_BACKOFF = 10  # seconds, multiplied by attempt number
+CONCURRENT_WORKERS = 3  # parallel page fetches
+BATCH_DELAY = 2  # seconds between batches
 
 
 def request_with_retry(url, params=None):
@@ -99,6 +100,7 @@ def fetch_all_products() -> list[dict]:
         if done:
             break
         batch_start += CONCURRENT_WORKERS
+        time.sleep(BATCH_DELAY)
 
     print(f"\nFetched {len(all_products)} products total.\n")
     return all_products
@@ -108,6 +110,7 @@ def analyze_product(product: dict) -> dict:
     """Analyze a single product dict for tester variant availability."""
     title = product.get("title", "Unknown")
     handle = product.get("handle", "Unknown")
+    vendor = product.get("vendor", "Unknown")
     product_url = f"{BASE_URL}/products/{handle}"
     variants = product.get("variants", [])
 
@@ -128,6 +131,7 @@ def analyze_product(product: dict) -> dict:
     return {
         "title": title,
         "handle": handle,
+        "vendor": vendor,
         "url": product_url,
         "has_tester_variant": has_tester,
         "tester_available": tester_available,
@@ -142,6 +146,7 @@ def export_csv(results: list[dict], filename: str = "tester_availability.csv"):
         writer.writerow([
             "Product Title",
             "Handle",
+            "Brand",
             "URL",
             "Has Tester Variant",
             "Tester Available",
@@ -156,6 +161,7 @@ def export_csv(results: list[dict], filename: str = "tester_availability.csv"):
             writer.writerow([
                 r["title"],
                 r["handle"],
+                r["vendor"],
                 r["url"],
                 r["has_tester_variant"],
                 r["tester_available"],

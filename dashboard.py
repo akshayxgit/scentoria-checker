@@ -30,10 +30,17 @@ total = len(df)
 available = df["Tester Available"].sum()
 sold_out = total - available
 
-col1, col2, col3 = st.columns(3)
+col1, col2, col3, col4 = st.columns(4)
 col1.metric("Total Products", total)
 col2.metric("Testers Available", int(available))
 col3.metric("Sold Out", int(sold_out))
+
+has_ratings = "Fragrantica Rating" in df.columns and df["Fragrantica Rating"].notna().any()
+if has_ratings:
+    rated_count = df["Fragrantica Rating"].notna().sum()
+    col4.metric("With Ratings", int(rated_count))
+else:
+    col4.metric("With Ratings", "N/A")
 
 st.divider()
 
@@ -87,30 +94,48 @@ st.caption(f"Showing {len(filtered)} of {total} products")
 
 # --- Sort control ---
 sort_col, sort_dir = st.columns([2, 1])
+sort_options = ["Product Title", "Tester Price (lowest)", "Status"]
+if has_ratings:
+    sort_options.append("Fragrantica Rating")
 with sort_col:
-    sort_by = st.selectbox("Sort by", ["Product Title", "Tester Price (lowest)", "Status"])
+    sort_by = st.selectbox("Sort by", sort_options)
 with sort_dir:
     sort_order = st.radio("Order", ["Ascending", "Descending"], horizontal=True)
 
 ascending = sort_order == "Ascending"
 
 # --- Results table ---
-display_df = filtered[["Product Title", "Tester Available", "Min Price", "Tester Variant Details", "URL"]].copy()
+cols = ["Product Title", "Brand", "Tester Available", "Min Price", "Tester Variant Details", "URL"]
+if has_ratings:
+    cols.extend(["Fragrantica Rating", "Fragrantica Votes", "Fragrantica URL"])
+# Only use columns that exist
+cols = [c for c in cols if c in filtered.columns]
+display_df = filtered[cols].copy()
 display_df["Tester Available"] = display_df["Tester Available"].map({True: "Available", False: "Sold Out"})
-display_df = display_df.rename(columns={
+rename_map = {
     "Tester Available": "Status",
     "Min Price": "Tester Price (lowest)",
     "Tester Variant Details": "Variants",
-})
+}
+if has_ratings:
+    rename_map["Fragrantica Rating"] = "Fragrantica Rating"
+    rename_map["Fragrantica Votes"] = "Fragrantica Votes"
+    rename_map["Fragrantica URL"] = "Fragrantica URL"
+display_df = display_df.rename(columns=rename_map)
 
 sort_map = {"Product Title": "Product Title", "Tester Price (lowest)": "Tester Price (lowest)", "Status": "Status"}
 display_df = display_df.sort_values(sort_map[sort_by], ascending=ascending, na_position="last")
 
+column_config = {
+    "URL": st.column_config.LinkColumn("Link", display_text="Open"),
+}
+if has_ratings and "Fragrantica URL" in display_df.columns:
+    column_config["Fragrantica URL"] = st.column_config.LinkColumn("Fragrantica", display_text="Open")
+    column_config["Fragrantica Rating"] = st.column_config.NumberColumn("Rating", format="%.1f")
+
 st.dataframe(
     display_df,
-    column_config={
-        "URL": st.column_config.LinkColumn("Link", display_text="Open"),
-    },
+    column_config=column_config,
     width="stretch",
     hide_index=True,
     height=600,

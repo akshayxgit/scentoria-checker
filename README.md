@@ -24,7 +24,17 @@ python3 tester_checker.py
 
 This scrapes all products from the testers collection and exports results to `tester_availability.csv`.
 
-### 2. Launch the dashboard
+### 2. (Optional) Fetch Fragrantica ratings
+
+```bash
+python3 fragrantica_ratings.py
+```
+
+This looks up each available tester on Fragrantica and adds rating + review count to the CSV. Results are cached in `fragrantica_cache.json` so subsequent runs only fetch new products.
+
+**Note:** This step is slow (~7 seconds per product due to rate limiting). It's resumable — if interrupted, re-run and it picks up where it left off. Will not work on networks that block fragrantica.com.
+
+### 3. Launch the dashboard
 
 ```bash
 streamlit run dashboard.py
@@ -38,8 +48,8 @@ Open the URL shown in the terminal (usually `http://localhost:8501`).
 - Search by product name
 - Hide partial testers
 - Filter by price range
-- Sort by name, price, or status
-- Clickable links to product pages
+- Sort by name, price, status, or Fragrantica rating
+- Clickable links to product pages and Fragrantica pages
 
 ## How It Works
 
